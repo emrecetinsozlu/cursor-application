@@ -1,0 +1,66 @@
+---
+description: Clerk auth and user data isolation — users may only access their own data
+alwaysApply: true
+---
+
+# Clerk auth and data isolation
+
+All authentication is handled by **Clerk**. Users must only be able to access their own data; never expose or allow access to data that belongs to another user.
+
+## Rules
+
+- **Auth**: Use Clerk only for authentication (no custom auth or API keys for user identity). Use `auth()` from `@clerk/nextjs/server` in server code to get the current user.
+- **Identity**: In server code (API routes, Server Actions, server components), always resolve the current user with `auth()` and use `userId` (or throw/redirect if unauthenticated) before any data access.
+- **Scoping**: All reads and writes that touch user-owned data must be scoped by the current user’s ID (e.g. `clerkUserId`). Never return or update rows without verifying ownership.
+- **IDs in URLs**: Resource IDs in URLs (e.g. deck id, card id) are not proof of ownership. Always filter by the current `userId` (e.g. `clerkUserId` on decks) when loading or mutating by resource id.
+
+## Examples
+
+Use `auth` from `@clerk/nextjs/server` and `eq`, `and` from `drizzle-orm`; `db`, `decksTable` from `@/db`.
+
+```typescript
+// ❌ BAD – fetching a deck by id without checking ownership
+const deck = await db.query.decksTable.findFirst({
+  where: eq(decksTable.id, deckId),
+})
+
+// ✅ GOOD – scope by current user
+const { userId } = await auth()
+if (!userId) throw new Error('Unauthorized')
+const deck = await db.query.decksTable.findFirst({
+  where: and(eq(decksTable.id, deckId), eq(decksTable.clerkUserId, userId)),
+})
+if (!deck) return null // or 404 – user doesn’t own this deck
+```
+
+```typescript
+// ❌ BAD – listing decks without filtering by user
+const decks = await db.select().from(decksTable)
+
+// ✅ GOOD – only current user’s decks
+const { userId } = await auth()
+if (!userId) throw new Error('Unauthorized')
+const decks = await db
+  .select()
+  .from(decksTable)
+  .where(eq(decksTable.clerkUserId, userId))
+```
+
+```typescript
+// ❌ BAD – allowing update/delete by resource id only
+await db.update(decksTable).set({ title }).where(eq(decksTable.id, deckId))
+
+// ✅ GOOD – restrict to current user’s data
+const { userId } = await auth()
+if (!userId) throw new Error('Unauthorized')
+await db
+  .update(decksTable)
+  .set({ title })
+  .where(and(eq(decksTable.id, deckId), eq(decksTable.clerkUserId, userId)))
+```
+
+## Summary
+
+- Use **Clerk** for auth; get `userId` via `auth()` in server code.
+- **Always** scope queries and mutations by the current user (e.g. `clerkUserId`).
+- **Never** trust resource IDs alone; ownership must be enforced with the current user’s id.

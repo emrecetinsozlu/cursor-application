@@ -1,0 +1,38 @@
+---
+alwaysApply: true
+---
+
+# Drizzle database usage
+
+All database access in this project **must** use Drizzle ORM with the project schema and the shared `db` instance. Do not introduce raw SQL, other ORMs, or direct client usage.
+
+## Rules
+
+- **Import** the database client and schema from `@/db` (or `src/db`): use `db` for queries and export tables (e.g. `decksTable`, `cardsTable`) from the schema.
+- **Queries**: Use Drizzle query API only (e.g. `db.select()`, `db.insert()`, `db.update()`, `db.delete()`, `db.query.*`). No string SQL or `db.execute()` with raw strings unless strictly required and documented.
+- **Schema**: Add and change tables/columns only in `src/db/schema.ts`; keep a single source of truth. Run migrations via Drizzle Kit (`drizzle-kit`) when schema changes.
+
+## Examples
+
+```typescript
+// ❌ BAD – raw SQL / other clients
+const result = await sql`SELECT * FROM decks WHERE clerk_user_id = ${userId}`
+const client = new SomeOtherORM()
+
+// ✅ GOOD – Drizzle + project schema
+import { eq } from 'drizzle-orm'
+import { db, decksTable } from '@/db'
+const decks = await db
+  .select()
+  .from(decksTable)
+  .where(eq(decksTable.clerkUserId, userId))
+```
+
+```typescript
+// ❌ BAD – defining tables or queries outside schema
+const myTable = pgTable(...); // define in src/db/schema.ts only
+
+// ✅ GOOD – use schema exports
+import { db, decksTable, cardsTable } from "@/db";
+await db.insert(decksTable).values({ clerkUserId, title, description });
+```
