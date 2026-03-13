@@ -40,7 +40,7 @@ export function AuthModal() {
   return (
     <>
       <Show when="signed-out">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-6">
           <Button
             variant="ghost"
             onClick={() => {
