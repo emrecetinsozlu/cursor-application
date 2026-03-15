@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { SignIn, SignUp, useUser } from "@clerk/nextjs";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,12 +18,14 @@ export function AuthModal() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const { isSignedIn } = useUser();
+  const router = useRouter();
 
   useEffect(() => {
     if (isSignedIn && open) {
-      queueMicrotask(() => setOpen(false));
+      setOpen(false);
+      router.push("/dashboard");
     }
-  }, [isSignedIn, open]);
+  }, [isSignedIn, open, router]);
 
   // Modal açıkken Clerk içindeki "Sign up" / "Sign in" linkleri hash değiştirir; buna göre formu değiştir
   useEffect(() => {
@@ -73,11 +76,16 @@ export function AuthModal() {
               <SignIn
                 routing="hash"
                 signUpUrl="#sign-up"
+                forceRedirectUrl="/dashboard"
+                fallbackRedirectUrl="/dashboard"
                 appearance={{ elements: clerkCardStyles }}
               />
             ) : (
-              <SignUp routing="hash"
+              <SignUp
+                routing="hash"
                 signInUrl="#sign-in"
+                forceRedirectUrl="/dashboard"
+                fallbackRedirectUrl="/dashboard"
                 appearance={{ elements: clerkCardStyles }}
               />
             )}
