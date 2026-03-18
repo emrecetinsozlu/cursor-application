@@ -4,6 +4,7 @@ import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
 import { shadcn } from "@clerk/ui/themes";
 import "@clerk/ui/themes/shadcn.css";
 import { AuthModal } from "@/components/auth-modal";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,7 @@ export default function RootLayout({
             </div>
           </header>
           <main className="mt-10">{children}</main>
+          <Toaster />
         </ClerkProvider>
       </body>
     </html>

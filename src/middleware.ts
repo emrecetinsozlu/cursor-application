@@ -3,7 +3,13 @@ import { NextResponse } from "next/server";
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
-  const isHomePage = req.nextUrl.pathname === "/";
+  const pathname = req.nextUrl.pathname;
+  const isHomePage = pathname === "/";
+  const isDashboard = pathname.startsWith("/dashboard");
+
+  if (!userId && isDashboard) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
   if (userId && isHomePage) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }

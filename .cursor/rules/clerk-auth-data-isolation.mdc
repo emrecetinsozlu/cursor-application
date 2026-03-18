@@ -13,8 +13,28 @@ All authentication is handled by **Clerk**. Users must only be able to access th
 - **Identity**: In server code (API routes, Server Actions, server components), always resolve the current user with `auth()` and use `userId` (or throw/redirect if unauthenticated) before any data access.
 - **Scoping**: All reads and writes that touch user-owned data must be scoped by the current user’s ID (e.g. `clerkUserId`). Never return or update rows without verifying ownership.
 - **IDs in URLs**: Resource IDs in URLs (e.g. deck id, card id) are not proof of ownership. Always filter by the current `userId` (e.g. `clerkUserId` on decks) when loading or mutating by resource id.
+ - **Protected routes**: Unauthenticated users must never be able to access protected pages (e.g. `/dashboard`) even via direct URL entry. Use Clerk middleware (or server redirects) so that when `!userId` and the request path matches a protected route, the user is immediately redirected to the homepage (`/`) and the protected route is not rendered.
 
 ## Examples
+
+**Protected routes (middleware):**
+
+```typescript
+// src/middleware.ts – redirect unauthenticated users away from protected routes
+import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+
+export default clerkMiddleware(async (auth, req) => {
+  const { userId } = await auth();
+  const pathname = req.nextUrl.pathname;
+  const isDashboard = pathname.startsWith("/dashboard");
+
+  if (!userId && isDashboard) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
+  return NextResponse.next();
+});
+```
 
 Use `auth` from `@clerk/nextjs/server` and `eq`, `and` from `drizzle-orm`; `db`, `decksTable` from `@/db`.
 
