@@ -3,8 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { db } from "@/db";
-import { decksTable } from "@/db/schema";
+import { insertDeck } from "@/db/queries/decks";
 
 const createDeckSchema = z.object({
   title: z.string().min(1, "Başlık gerekli").max(255),
@@ -25,7 +24,7 @@ export async function createDeck(input: CreateDeckInput) {
     return { ok: false as const, error: { _form: ["Oturum açmanız gerekiyor."] } };
   }
 
-  await db.insert(decksTable).values({
+  await insertDeck({
     clerkUserId: userId,
     title: parsed.data.title,
     description: parsed.data.description ?? null,

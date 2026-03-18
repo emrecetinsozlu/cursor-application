@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 
 export function PreviewColumn() {
   return (
-    <aside className="relative mt-4 flex flex-1 items-center justify-center lg:mt-0">
+    <aside className="relative mt-4 flex flex-1 items-center justify-end lg:mt-0">
       <div className="floating-card-stack pointer-events-none relative w-full max-w-md">
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-sky-500/20 via-primary/10 to-fuchsia-500/20 blur-3xl" />
         <div className="relative flex flex-col gap-4 rounded-3xl border border-border/60 bg-gradient-to-b from-background/80 via-background/95 to-background/98 p-5 shadow-[0_18px_60px_rgba(0,0,0,0.55)] backdrop-blur">

@@ -1,47 +1,72 @@
 ---
-description: Server components for data retrieval, server actions for mutations, Zod validation, typed inputs only
 alwaysApply: true
 ---
-
 # Server data flow and validation
 
-Data access and mutations follow a strict pattern: server components for reads, server actions for writes, Zod for all validation. Server action inputs must be typed and validated with Zod—never use raw `FormData` as the parameter type.
+Data access and mutations follow a strict pattern: all database access goes through **helper functions in `db/queries`**; server components use query helpers for reads, server actions use mutation helpers for writes; Zod validates all external input. Server action inputs must be typed and validated with Zod—never use raw `FormData` as the parameter type.
 
 ## Rules
 
-- **Data retrieval**: Always perform data fetching in **server components** (or in code called from them). Do not fetch from the database in client components; pass data as props or load it in server components.
-- **Mutations**: All **inserts, updates, and deletes** to the database must be done via **server actions** (functions with `"use server"`). Do not mutate from client components via direct `db` calls or from API routes when a server action is the right fit.
+- **Query layer**: All **data fetching and mutations** must be done via **helper functions in the `db/queries` directory** (or `@/db/queries`). Do not call `db` directly from server components, server actions, or API routes; use the query/mutation helpers instead. Keep Drizzle usage and ownership scoping (e.g. `clerkUserId`) inside these helpers.
+- **Data retrieval**: Server components (or code called from them) **call query helpers** from `db/queries` to load data. Do not fetch from the database in client components; pass data as props or load it in server components.
+- **Mutations**: All **inserts, updates, and deletes** go through **server actions** (functions with `"use server"`). Server actions **call mutation helpers** from `db/queries`; they do not use `db` directly. Do not mutate from client components via direct `db` calls or from API routes when a server action is the right fit.
 - **Validation**: All user-facing or external input must be validated with **Zod**. Define a schema and parse/validate before using data in server actions or API routes.
 - **Server action inputs**: Do **not** use `FormData` as the type of a server action parameter. Accept a **typed payload** (e.g. a single object), validate it with Zod, and use the inferred TypeScript type. If the client sends form data, parse it into a plain object and pass that; the server action receives the object and validates it with Zod.
 
 ## Examples
 
+**Query and mutation helpers in `db/queries`:**
+
 ```typescript
-// ❌ BAD – server action taking FormData
-async function createDeck(formData: FormData) {
-  const title = formData.get('title') as string
-  await db.insert(decksTable).values({ title, clerkUserId })
+// db/queries/decks.ts – query helpers (reads)
+import { and, eq } from "drizzle-orm";
+import { db, decksTable } from "@/db";
+
+export async function getDecksByUserId(clerkUserId: string) {
+  return db.select().from(decksTable).where(eq(decksTable.clerkUserId, clerkUserId));
 }
 
-// ✅ GOOD – typed input validated with Zod
-import { z } from 'zod'
+export async function getDeckById(deckId: number, clerkUserId: string) {
+  const [deck] = await db
+    .select()
+    .from(decksTable)
+    .where(and(eq(decksTable.id, deckId), eq(decksTable.clerkUserId, clerkUserId)));
+  return deck ?? null;
+}
+```
 
-const createDeckSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
-})
+```typescript
+// db/queries/decks.ts – mutation helpers (writes)
+import { db, decksTable } from "@/db";
 
-export type CreateDeckInput = z.infer<typeof createDeckSchema>
+export async function insertDeck(params: {
+  clerkUserId: string;
+  title: string;
+  description: string | null;
+}) {
+  return db.insert(decksTable).values(params).returning();
+}
+```
+
+```typescript
+// ❌ BAD – server action taking FormData or using db directly
+async function createDeck(formData: FormData) {
+  const title = formData.get("title") as string;
+  await db.insert(decksTable).values({ title, clerkUserId });
+}
+
+// ✅ GOOD – server action calls mutation helper, typed input validated with Zod
+import { insertDeck } from "@/db/queries/decks";
 
 async function createDeck(input: CreateDeckInput) {
-  const parsed = createDeckSchema.parse(input)
-  const { userId } = await auth()
-  if (!userId) throw new Error('Unauthorized')
-  await db.insert(decksTable).values({
+  const parsed = createDeckSchema.parse(input);
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  await insertDeck({
     clerkUserId: userId,
     title: parsed.title,
     description: parsed.description ?? null,
-  })
+  });
 }
 ```
 
@@ -56,12 +81,21 @@ function DeckList() {
   return <ul>{decks.map(...)}</ul>
 }
 
-// ✅ GOOD – data in server component
+// ❌ BAD – server component using db directly
 async function DeckList() {
-  const { userId } = await auth()
-  if (!userId) redirect('/sign-in')
-  const decks = await db.select().from(decksTable).where(eq(decksTable.clerkUserId, userId))
-  return <ul>{decks.map(...)}</ul>
+  const { userId } = await auth();
+  const decks = await db.select().from(decksTable).where(eq(decksTable.clerkUserId, userId));
+  return <ul>{decks.map(...)}</ul>;
+}
+
+// ✅ GOOD – server component calls query helper from db/queries
+import { getDecksByUserId } from "@/db/queries/decks";
+
+async function DeckList() {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+  const decks = await getDecksByUserId(userId);
+  return <ul>{decks.map(...)}</ul>;
 }
 ```
 
@@ -69,18 +103,21 @@ async function DeckList() {
 // ❌ BAD – mutation from client via API route when server action fits
 // Client: fetch('/api/decks', { method: 'POST', body: JSON.stringify({ title }) })
 
-// ✅ GOOD – server action with Zod-validated typed input
+// ✅ GOOD – server action with Zod-validated input, mutation via db/queries helper
 'use server'
 async function createDeck(input: CreateDeckInput) {
-  const parsed = createDeckSchema.parse(input)
-  // ... insert with parsed data
+  const parsed = createDeckSchema.parse(input);
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+  await insertDeck({ clerkUserId: userId, title: parsed.title, description: parsed.description ?? null });
 }
 // Client: createDeck({ title: 'My Deck', description: '...' })
 ```
 
 ## Summary
 
-- **Reads**: Server components only (no DB access in client components for initial data).
-- **Writes**: Server actions only for insert/update/delete.
+- **Query layer**: All reads and writes go through helper functions in `db/queries`; no direct `db` usage in server components, server actions, or API routes.
+- **Reads**: Server components call query helpers from `db/queries` (no DB access in client components for initial data).
+- **Writes**: Server actions only for insert/update/delete; they call mutation helpers in `db/queries`.
 - **Validation**: Zod for all inputs; define schema and use `z.infer<>` for TypeScript types.
 - **No FormData type**: Server actions accept typed objects; validate with Zod and use the resulting type.

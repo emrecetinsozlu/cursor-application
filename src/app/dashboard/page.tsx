@@ -6,20 +6,24 @@ import {
   Plus,
   Sparkles,
 } from "lucide-react";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { FloatingBackground } from "@/components/home";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { cardsTable, decksTable } from "@/db/schema";
-import { db } from "@/db";
+import { getDecksByUserId } from "@/db/queries/decks";
+import { getCardsByUserId } from "@/db/queries/cards";
 import { CreateDeckModal } from "@/components/CreateDeckModal";
 
-
 export default async function DashboardPage() {
+  const { userId } = await auth();
+  if (!userId) redirect("/");
+
   const [decks, cards] = await Promise.all([
-    db.select().from(decksTable),
-    db.select().from(cardsTable),
+    getDecksByUserId(userId),
+    getCardsByUserId(userId),
   ]);
 
   const totalCards = cards.length;
@@ -88,8 +92,8 @@ export default async function DashboardPage() {
 
         <div className="grid gap-4 lg:grid-cols-3">
           {/* Son çalışılanlar / Hızlı erişim */}
-          <section className="lg:col-span-2 h-full">
-            <Card className="overflow-hidden rounded-2xl border-border/40 bg-background/60 shadow-sm backdrop-blur">
+          <section className="lg:col-span-2">
+            <Card className="h-full overflow-hidden rounded-2xl border-border/40 bg-background/60 shadow-sm backdrop-blur">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-foreground">
@@ -113,7 +117,7 @@ export default async function DashboardPage() {
                           className="w-full justify-between rounded-lg px-3 py-2 text-sm font-medium"
                           asChild
                         >
-                          <Link href="#" className="gap-2">
+                          <Link href={`/decks/${deck.id}`} className="gap-2">
                             <span className="truncate">{deck.title}</span>
                             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                           </Link>
@@ -137,8 +141,8 @@ export default async function DashboardPage() {
           </section>
 
           {/* Hızlı işlemler */}
-          <section className="h-full">
-            <Card className="overflow-hidden rounded-2xl border-border/40 bg-background/60 shadow-sm backdrop-blur h-full">
+          <section>
+            <Card className="h-full overflow-hidden rounded-2xl border-border/40 bg-background/60 shadow-sm backdrop-blur h-full">
               <CardHeader className="pb-2">
                 <h2 className="text-lg font-semibold text-foreground">
                   Hızlı işlemler

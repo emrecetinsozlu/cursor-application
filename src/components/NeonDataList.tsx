@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { cardsTable, decksTable } from "@/db/schema";
+import { getAllDecks } from "@/db/queries/decks";
+import { getAllCards } from "@/db/queries/cards";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 /**
@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
  */
 export async function NeonDataList() {
   const [decks, cards] = await Promise.all([
-    db.select().from(decksTable),
-    db.select().from(cardsTable),
+    getAllDecks(),
+    getAllCards(),
   ]);
 
   return (

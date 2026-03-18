@@ -8,6 +8,7 @@ export const decksTable = pgTable("decks", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+
 export const cardsTable = pgTable("cards", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   deckId: integer("deck_id")
@@ -16,4 +17,5 @@ export const cardsTable = pgTable("cards", {
   front: text("front").notNull(),
   back: text("back").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
