@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Geist } from "next/font/google";
+import { Geist } from "next/font/google";
 import { ClerkProvider, Show, UserButton } from "@clerk/nextjs";
 import { shadcn } from "@clerk/ui/themes";
 import "@clerk/ui/themes/shadcn.css";

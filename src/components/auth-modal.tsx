@@ -21,11 +21,8 @@ export function AuthModal() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isSignedIn && open) {
-      setOpen(false);
-      router.push("/dashboard");
-    }
-  }, [isSignedIn, open, router]);
+    if (isSignedIn) router.push("/dashboard");
+  }, [isSignedIn, router]);
 
   // Modal açıkken Clerk içindeki "Sign up" / "Sign in" linkleri hash değiştirir; buna göre formu değiştir
   useEffect(() => {
@@ -63,35 +60,37 @@ export function AuthModal() {
           </Button>
         </div>
       </Show>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent
-          className="max-w-[min(400px,calc(100vw-2rem)] p-0 gap-0 overflow-hidden border-0 bg-transparent shadow-none flex items-center justify-center"
-          showCloseButton={true}
-        >
-          <DialogTitle className="sr-only">
-            {mode === "sign-in" ? "Sign in" : "Sign up"}
-          </DialogTitle>
-          <div className="flex w-full items-center justify-center rounded-xl border bg-background p-0 shadow-lg ring-1 ring-foreground/10">
-            {mode === "sign-in" ? (
-              <SignIn
-                routing="hash"
-                signUpUrl="#sign-up"
-                forceRedirectUrl="/dashboard"
-                fallbackRedirectUrl="/dashboard"
-                appearance={{ elements: clerkCardStyles }}
-              />
-            ) : (
-              <SignUp
-                routing="hash"
-                signInUrl="#sign-in"
-                forceRedirectUrl="/dashboard"
-                fallbackRedirectUrl="/dashboard"
-                appearance={{ elements: clerkCardStyles }}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <Show when="signed-out">
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent
+            className="max-w-[min(400px,calc(100vw-2rem)] p-0 gap-0 overflow-hidden border-0 bg-transparent shadow-none flex items-center justify-center"
+            showCloseButton={true}
+          >
+            <DialogTitle className="sr-only">
+              {mode === "sign-in" ? "Sign in" : "Sign up"}
+            </DialogTitle>
+            <div className="flex w-full items-center justify-center rounded-xl border bg-background p-0 shadow-lg ring-1 ring-foreground/10">
+              {mode === "sign-in" ? (
+                <SignIn
+                  routing="hash"
+                  signUpUrl="#sign-up"
+                  forceRedirectUrl="/dashboard"
+                  fallbackRedirectUrl="/dashboard"
+                  appearance={{ elements: clerkCardStyles }}
+                />
+              ) : (
+                <SignUp
+                  routing="hash"
+                  signInUrl="#sign-in"
+                  forceRedirectUrl="/dashboard"
+                  fallbackRedirectUrl="/dashboard"
+                  appearance={{ elements: clerkCardStyles }}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </Show>
     </>
   );
 }

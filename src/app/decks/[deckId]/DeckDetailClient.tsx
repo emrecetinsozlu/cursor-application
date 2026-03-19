@@ -31,8 +31,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const labelClass = "text-sm font-medium text-foreground mb-1.5 block";
-const inputClass =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary";
 
 type CardItem = {
   id: number;
